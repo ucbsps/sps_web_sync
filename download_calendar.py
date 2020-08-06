@@ -1,0 +1,135 @@
+from datetime import datetime, timedelta
+from re import findall
+
+import mariadb
+from googleapiclient.discovery import build
+
+from secrets import MARIADB_USER, MARIADB_PASSWORD, MARIADB_DB, SCOPES
+from db_util import load_set_id
+from gd_util import get_creds
+
+creds = get_creds('token.pickle')
+
+service = build('calendar', 'v3', credentials=creds)
+
+try:
+    db_conn = mariadb.connect(user=MARIADB_USER, password=MARIADB_PASSWORD, database=MARIADB_DB,
+                              host='localhost', port=3306)
+except mariadb.Error as e:
+    print('Error connecting to database: {}'.format(e))
+
+    exit()
+
+cur = db_conn.cursor()
+
+try:
+    cur.execute('SELECT updated FROM web2020_events ORDER BY updated DESC LIMIT 1')
+except mariadb.Error as e:
+    print('Error selecting from database: {}'.format(e))
+
+    exit()
+
+last_updates = cur.fetchall()
+
+if len(last_updates) == 0 or last_updates[0][0] < datetime.utcnow() - timedelta(days=30):
+    last_update = None
+else:
+    last_update = last_updates[0][0].isoformat() + 'Z'
+
+time_min = (datetime.utcnow() - timedelta(days=365)).isoformat() + 'Z'
+time_max = (datetime.utcnow() + timedelta(days=365)).isoformat() + 'Z'
+
+events_result = service.events().list(calendarId='ucbsps@gmail.com', updatedMin=last_update,
+                                      timeMin=time_min, timeMax=time_max,
+                                      maxResults=2500, singleEvents=True).execute()
+
+events = events_result.get('items', [])
+
+if not events:
+    print('No upcoming events found.')
+
+    exit()
+
+for event in events:
+    google_cal_id = event['id']
+    try:
+        cur.execute('SELECT id FROM web2020_events WHERE google_cal_id=?', (google_cal_id,))
+    except mariadb.Error as e:
+        print('DB Error: {}'.format(e))
+
+        continue
+
+    ids = cur.fetchall()
+    if len(ids) == 0:
+        id = None
+    else:
+        id = ids[0][0]
+
+    try:
+        event_start_time = datetime.fromisoformat(event['start']['dateTime'])
+        event_end_time = datetime.fromisoformat(event['end']['dateTime'])
+    except KeyError: # Sometimes there is no time
+        event_start_time = datetime.fromisoformat(event['start']['date'])
+        event_end_time = datetime.fromisoformat(event['end']['date'])
+
+    try:
+        location = event['location']
+    except:
+        location = None
+
+    try:
+        title = event['summary']
+    except:
+        title = ''
+
+    try:
+        description = event['description']
+    except:
+        description = ''
+
+    tags = findall('#[A-Za-z][A-Za-z0-9\-\.\_]*', description)
+
+    print('Found event {}'.format(title))
+
+    try:
+        cur.execute('INSERT INTO web2020_events' +
+                    ' (id, title, description, start_time, end_time, location, google_cal_id)' +
+                    ' VALUES (?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE' +
+                    ' title=VALUES(title), description=VALUES(description),' +
+                    ' start_time=VALUES(start_time), end_time=VALUES(end_time),' +
+                    ' location=VALUES(location)',
+                    (id, title, description, event_start_time, event_end_time,
+                     location, google_cal_id,))
+    except mariadb.Error as e:
+        print('DB Error: {}'.format(e))
+
+        continue
+
+    if id == None:
+        try:
+            cur.execute('SELECT id FROM web2020_events WHERE google_cal_id=?', (google_cal_id,))
+        except mariadb.Error as e:
+            print('DB Error: {}'.format(e))
+
+            continue
+
+        ids = cur.fetchall()
+        if len(ids) == 0:
+            continue
+        else:
+            id = ids[0][0]
+
+
+    cur.execute('DELETE FROM web2020_events_tags where event_id=?', (id,))
+
+    for tag in tags:
+        tag_id = load_set_id(cur, 'web2020_tags', 'tag', tag)
+
+        if not tag_id == None:
+            try:
+                cur.execute('INSERT INTO web2020_events_tags (event_id, tag_id) VALUES (?, ?)',
+                            (id, tag_id,))
+            except mariadb.Error as e:
+                print('DB Error: {}'.format(e))
+
+                continue
