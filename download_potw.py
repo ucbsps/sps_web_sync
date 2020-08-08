@@ -64,10 +64,10 @@ except mariadb.Error as e:
 
 last_updates = cur.fetchall()
 
-if len(last_updates) == 0 or last_updates[0][0] < datetime.utcnow() - timedelta(days=30):
-    last_update = datetime.utcnow() - timedelta(days=365)
-else:
+try:
     last_update = last_updates[0][0]
+except:
+    last_update = datetime.utcnow() - timedelta(days=365)
 
 sheet = sheets_service.spreadsheets()
 result = sheet.values().get(spreadsheetId=SPREADSHEET_ID, range=RANGE_NAME).execute()
