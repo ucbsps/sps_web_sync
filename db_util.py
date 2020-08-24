@@ -1,9 +1,9 @@
-import mariadb
+import pymysql
 
 def load_set_id(cur, table, column, value):
     try:
-        cur.execute('SELECT id FROM {} WHERE {}=?'.format(table, column), (value,))
-    except mariadb.Error as e:
+        cur.execute('SELECT id FROM {} WHERE {}=%s'.format(table, column), (value,))
+    except pymysql.Error as e:
         print('DB Error: {}'.format(e))
 
         return None
@@ -11,13 +11,13 @@ def load_set_id(cur, table, column, value):
     ids = cur.fetchall()
     if len(ids) == 0:
         try:
-            cur.execute('INSERT INTO {} (id, {}) VALUES(0, ?)'.format(table, column), (value,))
-        except mariadb.Error as e:
+            cur.execute('INSERT INTO {} (id, {}) VALUES(0, %s)'.format(table, column), (value,))
+        except pymysql.Error as e:
             print('DB Error: {}'.format(e))
 
     try:
-        cur.execute('SELECT id FROM {} WHERE {}=?'.format(table, column), (value,))
-    except mariadb.Error as e:
+        cur.execute('SELECT id FROM {} WHERE {}=%s'.format(table, column), (value,))
+    except pymysql.Error as e:
         print('DB Error: {}'.format(e))
 
         return None

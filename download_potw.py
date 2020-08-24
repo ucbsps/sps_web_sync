@@ -3,17 +3,17 @@ from io import FileIO
 from os import environ
 from urllib.parse import urlparse, parse_qs
 
-import mariadb
+import pymysql
 from apiclient.http import MediaIoBaseDownload
 from googleapiclient.discovery import build
 
-from secrets import MARIADB_USER, MARIADB_PASSWORD, MARIADB_DB
+from secrets import MARIADB_USER, MARIADB_PASSWORD, MARIADB_DB, MARIADB_HOST
 from db_util import load_set_id
 from gd_util import get_creds
 
 SPREADSHEET_ID = '15BHEtsYFtnzQ38YtF0zi7amT76kcBmG7PD14NXkEWyY'
 RANGE_NAME = 'Form Responses 1!A1:G200'
-SPS_WEB_2020_DIR = environ['HOME'] + '/sps_web_2020'
+WEB_DIR = environ['HOME'] + '/public_html/'
 
 def get_url_id_param(url):
     params = parse_qs(urlparse(url).query)
@@ -30,7 +30,7 @@ def download_gd_file(drive_service, file_id, filename_base):
     request = drive_service.files().get_media(fileId=file_id)
 
     filename = filename_base + '.' + original_filename.split('.')[-1]
-    file_handle = FileIO(SPS_WEB_2020_DIR + filename, 'wb')
+    file_handle = FileIO(WEB_DIR + filename, 'wb')
 
     downloader = MediaIoBaseDownload(file_handle, request)
 
@@ -46,9 +46,9 @@ sheets_service = build('sheets', 'v4', credentials=creds)
 drive_service = build('drive', 'v3', credentials=creds)
 
 try:
-    db_conn = mariadb.connect(user=MARIADB_USER, password=MARIADB_PASSWORD, database=MARIADB_DB,
-                              host='localhost', port=3306)
-except mariadb.Error as e:
+    db_conn = pymysql.connect(user=MARIADB_USER, password=MARIADB_PASSWORD, database=MARIADB_DB,
+                              host=MARIADB_HOST, port=3306, autocommit=True)
+except pymysql.Error as e:
     print('Error connecting to database: {}'.format(e))
 
     exit()
@@ -57,7 +57,7 @@ cur = db_conn.cursor()
 
 try:
     cur.execute('SELECT updated FROM web2020_potw ORDER BY updated DESC LIMIT 1')
-except mariadb.Error as e:
+except pymysql.Error as e:
     print('Error selecting from database: {}'.format(e))
 
     exit()
@@ -117,10 +117,10 @@ else:
         try:
             cur.execute('INSERT INTO web2020_potw' +
                         ' (start_date, end_date, problem, linked_problem, solution, linked_solution)' +
-                        ' VALUES (?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE' +
+                        ' VALUES (%s, %s, %s, %s, %s, %s) ON DUPLICATE KEY UPDATE' +
                         ' end_date=VALUES(end_date), problem=VALUES(problem),' +
                         ' linked_problem=VALUES(linked_problem), solution=VALUES(solution),' +
                         ' linked_solution=VALUES(linked_solution)',
                         (start_date, end_date, problem, problem_filename, solution, solution_filename,))
-        except mariadb.Error as e:
+        except pymysql.Error as e:
             print('DB Error: {}'.format(e))
