@@ -21,6 +21,8 @@ def get_url_id_param(url):
         ids = params['id']
         if len(ids) > 0:
             return ids[0]
+    elif 'usp' in params:
+        return url.split('/').pop(-2)
     return None
 
 def download_gd_file(drive_service, file_id, filename_base):
@@ -55,20 +57,6 @@ except pymysql.Error as e:
 
 cur = db_conn.cursor()
 
-try:
-    cur.execute('SELECT updated FROM web2020_potw ORDER BY updated DESC LIMIT 1')
-except pymysql.Error as e:
-    print('Error selecting from database: {}'.format(e))
-
-    exit()
-
-last_updates = cur.fetchall()
-
-try:
-    last_update = last_updates[0][0]
-except:
-    last_update = datetime.utcnow() - timedelta(days=365)
-
 sheet = sheets_service.spreadsheets()
 result = sheet.values().get(spreadsheetId=SPREADSHEET_ID, range=RANGE_NAME).execute()
 values = result.get('values', [])
@@ -80,8 +68,6 @@ else:
         if row[0] == 'Timestamp':
             # header row
             continue
-
-        updated = datetime.strptime(row[0], '%m/%d/%Y %H:%M:%S')
 
         start_date = datetime.strptime(row[1], '%m/%d/%Y').date()
         end_date = datetime.strptime(row[2], '%m/%d/%Y').date()
