@@ -69,6 +69,11 @@ for event in events:
         event_start_time = datetime.fromisoformat(event['start']['dateTime'])
         event_end_time = datetime.fromisoformat(event['end']['dateTime'])
     except KeyError: # Sometimes there is no time
+
+        if 'start' not in event:
+            # A calendar event with no times? Skip it
+            continue
+
         event_start_time = datetime.fromisoformat(event['start']['date'])
         event_end_time = datetime.fromisoformat(event['end']['date'])
 
