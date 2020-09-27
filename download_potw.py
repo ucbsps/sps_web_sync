@@ -141,6 +141,10 @@ else:
             print('DB Error: {}'.format(e))
 
         for row in values:
+            if len(row) < 3:
+                # empty row
+                continue
+
             if row[0] == 'Email':
                 # header row
                 continue
@@ -148,6 +152,13 @@ else:
             email = row[0]
             name = row[1]
             solved = row[2]
+
+            if email is None or len(email) == 0:
+                continue
+            if name is None or len(name) == 0:
+                continue
+            if solved is None or len(solved) == 0:
+                continue
 
             try:
                 cur.execute('INSERT INTO web2020_potw_leaderboard' +
