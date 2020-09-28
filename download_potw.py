@@ -15,6 +15,7 @@ PROBLEM_SPREADSHEET_ID = '15BHEtsYFtnzQ38YtF0zi7amT76kcBmG7PD14NXkEWyY'
 PROBLEM_RANGE_NAME = 'Form Responses 1!A1:G200'
 SCOREBOARD_SPREADSHEET_ID = '1U9ESoCQAkihbgGNWkPrid5LhgJL04jXTf8zv93St8Wk'
 SCOREBOARD_RANGE_NAME = 'Sheet1!A1:G200'
+
 WEB_DIR = environ['HOME'] + '/public_html/'
 
 def get_url_id_param(url):
@@ -44,18 +45,14 @@ def download_gd_file(drive_service, file_id, filename_base):
 
     return filename
 
-### Connect to Google Drive
-
 creds = get_creds('token.pickle')
 
 sheets_service = build('sheets', 'v4', credentials=creds)
 drive_service = build('drive', 'v3', credentials=creds)
 
-### Connect to the database
-
 try:
     db_conn = pymysql.connect(user=MARIADB_USER, password=MARIADB_PASSWORD, database=MARIADB_DB,
-                              host=MARIADB_HOST, port=3306, autocommit=False)
+                              host=MARIADB_HOST, port=3306, autocommit=True)
 except pymysql.Error as e:
     print('Error connecting to database: {}'.format(e))
 
@@ -63,10 +60,8 @@ except pymysql.Error as e:
 
 cur = db_conn.cursor()
 
-### Download problems
-
 sheet = sheets_service.spreadsheets()
-result = sheet.values().get(spreadsheetId=PROBLEM_SPREADSHEET_ID, range=PROBLEM_RANGE_NAME).execute()
+result = sheet.values().get(spreadsheetId=SPREADSHEET_ID, range=RANGE_NAME).execute()
 values = result.get('values', [])
 
 if not values:
@@ -131,10 +126,6 @@ result = sheet.values().get(spreadsheetId=SCOREBOARD_SPREADSHEET_ID,
                             range=SCOREBOARD_RANGE_NAME).execute()
 values = result.get('values', [])
 
-if not values:
-    print('No data found.')
-else:
-    with db_conn.cursor() as cur:
         try:
             cur.execute('DELETE FROM web2020_potw_scoreboard')
         except pymysql.Error as e:
