@@ -11,8 +11,11 @@ from secrets import MARIADB_USER, MARIADB_PASSWORD, MARIADB_DB, MARIADB_HOST
 from db_util import load_set_id
 from gd_util import get_creds
 
-SPREADSHEET_ID = '15BHEtsYFtnzQ38YtF0zi7amT76kcBmG7PD14NXkEWyY'
-RANGE_NAME = 'Form Responses 1!A1:G200'
+PROBLEM_SPREADSHEET_ID = '15BHEtsYFtnzQ38YtF0zi7amT76kcBmG7PD14NXkEWyY'
+PROBLEM_RANGE_NAME = 'Form Responses 1!A1:G200'
+SCOREBOARD_SPREADSHEET_ID = '1U9ESoCQAkihbgGNWkPrid5LhgJL04jXTf8zv93St8Wk'
+SCOREBOARD_RANGE_NAME = 'Sheet1!A1:G200'
+
 WEB_DIR = environ['HOME'] + '/public_html/'
 
 def get_url_id_param(url):
@@ -64,49 +67,102 @@ values = result.get('values', [])
 if not values:
     print('No data found.')
 else:
-    for row in values:
-        if row[0] == 'Timestamp':
-            # header row
-            continue
+    with db_conn.cursor() as cur:
+        for row in values:
+            if row[0] == 'Timestamp':
+                # header row
+                continue
 
-        start_date = datetime.strptime(row[1], '%m/%d/%Y').date()
-        end_date = datetime.strptime(row[2], '%m/%d/%Y').date()
+            start_date = datetime.strptime(row[1], '%m/%d/%Y').date()
+            end_date = datetime.strptime(row[2], '%m/%d/%Y').date()
 
-        problem = None
-        if len(row) > 3:
-            problem = row[3]
-        problem_file_id = None
-        if len(row) > 4:
-            if row[4] != '':
-                problem_file_id = get_url_id_param(row[4])
+            problem = None
+            if len(row) > 3:
+                problem = row[3]
+            problem_file_id = None
+            if len(row) > 4:
+                if row[4] != '':
+                    problem_file_id = get_url_id_param(row[4])
 
-        solution = None
-        if len(row) > 5:
-            solution = row[5]
-        solution_file_id = None
-        if len(row) > 6:
-            if row[6] != '':
-                solution_file_id = get_url_id_param(row[6])
+            solution = None
+            if len(row) > 5:
+                solution = row[5]
+            solution_file_id = None
+            if len(row) > 6:
+                if row[6] != '':
+                    solution_file_id = get_url_id_param(row[6])
 
-        if problem_file_id != None:
-            problem_filename = '/static/potw_' + start_date.isoformat() + '_problem'
-            problem_filename = download_gd_file(drive_service, problem_file_id, problem_filename)
-        else:
-            problem_filename = None
+            if problem_file_id != None:
+                problem_filename = '/static/potw_' + start_date.isoformat() + '_problem'
+                problem_filename = download_gd_file(drive_service, problem_file_id, problem_filename)
+            else:
+                problem_filename = None
 
-        if solution_file_id != None:
-            solution_filename = '/static/potw_' + start_date.isoformat() + '_solution'
-            solution_filename = download_gd_file(drive_service, solution_file_id, solution_filename)
-        else:
-            solution_filename = None
+            if solution_file_id != None:
+                solution_filename = '/static/potw_' + start_date.isoformat() + '_solution'
+                solution_filename = download_gd_file(drive_service, solution_file_id, solution_filename)
+            else:
+                solution_filename = None
+
+            try:
+                cur.execute('INSERT INTO web2020_potw' +
+                            ' (start_date, end_date, problem, linked_problem,' +
+                            ' solution, linked_solution)' +
+                            ' VALUES (%s, %s, %s, %s, %s, %s) ON DUPLICATE KEY UPDATE' +
+                            ' end_date=VALUES(end_date), problem=VALUES(problem),' +
+                            ' linked_problem=VALUES(linked_problem), solution=VALUES(solution),' +
+                            ' linked_solution=VALUES(linked_solution)',
+                            (start_date, end_date, problem, problem_filename,
+                             solution, solution_filename,))
+            except pymysql.Error as e:
+                print('DB Error: {}'.format(e))
+
+    db_conn.commit()
+
+### Download scoreboard
+
+sheet = sheets_service.spreadsheets()
+result = sheet.values().get(spreadsheetId=SCOREBOARD_SPREADSHEET_ID,
+                            range=SCOREBOARD_RANGE_NAME).execute()
+values = result.get('values', [])
 
         try:
-            cur.execute('INSERT INTO web2020_potw' +
-                        ' (start_date, end_date, problem, linked_problem, solution, linked_solution)' +
-                        ' VALUES (%s, %s, %s, %s, %s, %s) ON DUPLICATE KEY UPDATE' +
-                        ' end_date=VALUES(end_date), problem=VALUES(problem),' +
-                        ' linked_problem=VALUES(linked_problem), solution=VALUES(solution),' +
-                        ' linked_solution=VALUES(linked_solution)',
-                        (start_date, end_date, problem, problem_filename, solution, solution_filename,))
+            cur.execute('DELETE FROM web2020_potw_scoreboard')
         except pymysql.Error as e:
             print('DB Error: {}'.format(e))
+
+        for row in values:
+            if len(row) < 3:
+                # empty row
+                continue
+
+            if row[0] == 'Email':
+                # header row
+                continue
+
+            email = row[0]
+            name = row[1]
+            solved = row[2]
+
+            if email is None or len(email) == 0:
+                continue
+            if name is None or len(name) == 0:
+                continue
+            if solved is None or len(solved) == 0:
+                continue
+
+            try:
+                cur.execute('INSERT INTO web2020_potw_scoreboard' +
+                        ' (email, name, solved)' +
+                        ' VALUES (%s, %s, %s) ON DUPLICATE KEY UPDATE' +
+                        ' email=VALUES(email), name=VALUES(name),' +
+                        ' solved=VALUES(solved)',
+                        (email, name, solved))
+            except pymysql.Error as e:
+                print('DB Error: {}'.format(e))
+    db_conn.commit()
+
+### Cleanup database connection
+
+cur.close()
+db_conn.close()
