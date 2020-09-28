@@ -13,8 +13,8 @@ from gd_util import get_creds
 
 PROBLEM_SPREADSHEET_ID = '15BHEtsYFtnzQ38YtF0zi7amT76kcBmG7PD14NXkEWyY'
 PROBLEM_RANGE_NAME = 'Form Responses 1!A1:G200'
-LEADERBOARD_SPREADSHEET_ID = '1U9ESoCQAkihbgGNWkPrid5LhgJL04jXTf8zv93St8Wk'
-LEADERBOARD_RANGE_NAME = 'Sheet1!A1:G200'
+SCOREBOARD_SPREADSHEET_ID = '1U9ESoCQAkihbgGNWkPrid5LhgJL04jXTf8zv93St8Wk'
+SCOREBOARD_RANGE_NAME = 'Sheet1!A1:G200'
 WEB_DIR = environ['HOME'] + '/public_html/'
 
 def get_url_id_param(url):
@@ -124,11 +124,11 @@ else:
 
     db_conn.commit()
 
-### Download leaderboard
+### Download scoreboard
 
 sheet = sheets_service.spreadsheets()
-result = sheet.values().get(spreadsheetId=LEADERBOARD_SPREADSHEET_ID,
-                            range=LEADERBOARD_RANGE_NAME).execute()
+result = sheet.values().get(spreadsheetId=SCOREBOARD_SPREADSHEET_ID,
+                            range=SCOREBOARD_RANGE_NAME).execute()
 values = result.get('values', [])
 
 if not values:
@@ -136,7 +136,7 @@ if not values:
 else:
     with db_conn.cursor() as cur:
         try:
-            cur.execute('DELETE FROM web2020_potw_leaderboard')
+            cur.execute('DELETE FROM web2020_potw_scoreboard')
         except pymysql.Error as e:
             print('DB Error: {}'.format(e))
 
@@ -161,7 +161,7 @@ else:
                 continue
 
             try:
-                cur.execute('INSERT INTO web2020_potw_leaderboard' +
+                cur.execute('INSERT INTO web2020_potw_scoreboard' +
                         ' (email, name, solved)' +
                         ' VALUES (%s, %s, %s) ON DUPLICATE KEY UPDATE' +
                         ' email=VALUES(email), name=VALUES(name),' +
