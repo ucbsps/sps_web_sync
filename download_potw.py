@@ -61,7 +61,7 @@ except pymysql.Error as e:
 cur = db_conn.cursor()
 
 sheet = sheets_service.spreadsheets()
-result = sheet.values().get(spreadsheetId=SPREADSHEET_ID, range=RANGE_NAME).execute()
+result = sheet.values().get(spreadsheetId=PROBLEM_SPREADSHEET_ID, range=PROBLEM_RANGE_NAME).execute()
 values = result.get('values', [])
 
 if not values:
