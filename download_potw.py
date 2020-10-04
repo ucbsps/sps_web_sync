@@ -126,6 +126,10 @@ result = sheet.values().get(spreadsheetId=SCOREBOARD_SPREADSHEET_ID,
                             range=SCOREBOARD_RANGE_NAME).execute()
 values = result.get('values', [])
 
+if not values:
+    print('No data found.')
+else:
+    with db_conn.cursor() as cur:
         try:
             cur.execute('DELETE FROM web2020_potw_scoreboard')
         except pymysql.Error as e:
