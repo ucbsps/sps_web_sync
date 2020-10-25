@@ -1,5 +1,6 @@
 venv
 secrets.py
+sps_secrets.py
 token.pickle
 credentials.json
 __pycache__
