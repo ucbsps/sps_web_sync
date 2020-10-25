@@ -7,7 +7,7 @@ import pymysql
 from apiclient.http import MediaIoBaseDownload
 from googleapiclient.discovery import build
 
-from secrets import MARIADB_USER, MARIADB_PASSWORD, MARIADB_DB, MARIADB_HOST
+from sps_secrets import MARIADB_USER, MARIADB_PASSWORD, MARIADB_DB, MARIADB_HOST
 from db_util import load_set_id
 from gd_util import get_creds
 

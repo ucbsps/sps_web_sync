@@ -4,7 +4,7 @@ from re import findall
 import pymysql
 from googleapiclient.discovery import build
 
-from secrets import MARIADB_USER, MARIADB_PASSWORD, MARIADB_DB, MARIADB_HOST, SCOPES
+from sps_secrets import MARIADB_USER, MARIADB_PASSWORD, MARIADB_DB, MARIADB_HOST, SCOPES
 from db_util import load_set_id
 from gd_util import get_creds
 
