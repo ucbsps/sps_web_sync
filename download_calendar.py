@@ -39,9 +39,14 @@ except:
 time_min = (datetime.utcnow() - timedelta(days=100)).isoformat() + 'Z'
 time_max = (datetime.utcnow() + timedelta(days=100)).isoformat() + 'Z'
 
-events_result = service.events().list(calendarId='ucbsps@gmail.com', updatedMin=last_update,
-                                      timeMin=time_min, timeMax=time_max,
-                                      maxResults=2500, singleEvents=True).execute()
+try:
+    events_result = service.events().list(calendarId='ucbsps@gmail.com', updatedMin=last_update,
+                                          timeMin=time_min, timeMax=time_max,
+                                          maxResults=2500, singleEvents=True).execute()
+except HttpError:
+    print('Updating all events')
+    events_result = service.events().list(calendarId='ucbsps@gmail.com',
+                                          maxResults=2500, singleEvents=True).execute()
 
 events = events_result.get('items', [])
 
