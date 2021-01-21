@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 from re import findall
 
 import pymysql
-from googleapiclient.discovery import build
+from googleapiclient.discovery import build, HttpError
 
 from sps_secrets import MARIADB_USER, MARIADB_PASSWORD, MARIADB_DB, MARIADB_HOST, SCOPES
 from db_util import load_set_id
