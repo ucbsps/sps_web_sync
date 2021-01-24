@@ -12,9 +12,9 @@ from db_util import load_set_id
 from gd_util import get_creds
 
 PROBLEM_SPREADSHEET_ID = '15BHEtsYFtnzQ38YtF0zi7amT76kcBmG7PD14NXkEWyY'
-PROBLEM_RANGE_NAME = 'Form Responses 1!A1:G200'
+PROBLEM_RANGE_NAME = 'Form Responses 1!A1:H500'
 SCOREBOARD_SPREADSHEET_ID = '1U9ESoCQAkihbgGNWkPrid5LhgJL04jXTf8zv93St8Wk'
-SCOREBOARD_RANGE_NAME = 'Sheet1!A1:G200'
+SCOREBOARD_RANGE_NAME = 'Sheet1!A1:C500'
 
 WEB_DIR = environ['HOME'] + '/public_html/'
 
@@ -104,16 +104,21 @@ else:
             else:
                 solution_filename = None
 
+            name = None
+            if len(row) > 7:
+                name = row[7]
+            print(row)
+
             try:
                 cur.execute('INSERT INTO web2020_potw' +
                             ' (start_date, end_date, problem, linked_problem,' +
-                            ' solution, linked_solution)' +
-                            ' VALUES (%s, %s, %s, %s, %s, %s) ON DUPLICATE KEY UPDATE' +
+                            ' solution, linked_solution, name)' +
+                            ' VALUES (%s, %s, %s, %s, %s, %s, %s) ON DUPLICATE KEY UPDATE' +
                             ' end_date=VALUES(end_date), problem=VALUES(problem),' +
                             ' linked_problem=VALUES(linked_problem), solution=VALUES(solution),' +
-                            ' linked_solution=VALUES(linked_solution)',
+                            ' linked_solution=VALUES(linked_solution), name=VALUES(name)',
                             (start_date, end_date, problem, problem_filename,
-                             solution, solution_filename,))
+                             solution, solution_filename, name,))
             except pymysql.Error as e:
                 print('DB Error: {}'.format(e))
 
