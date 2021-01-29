@@ -107,7 +107,6 @@ else:
             name = None
             if len(row) > 7:
                 name = row[7]
-            print(row)
 
             try:
                 cur.execute('INSERT INTO web2020_potw' +
