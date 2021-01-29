@@ -143,3 +143,7 @@ for event in events:
                 print('DB Error: {}'.format(e))
 
                 continue
+
+    # Remove events that SPS officers are invited to
+    # They should really not be on this calendar at all, since it is our public events calendar, but yeah
+    cur.execute('DELETE FROM web2020_events_tags where description like "%Kathleen Cooney%"')
