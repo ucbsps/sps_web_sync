@@ -1,6 +1,6 @@
 from datetime import date, datetime, timedelta
 from io import FileIO
-from os import environ
+from os import environ, listdir
 from urllib.parse import urlparse, parse_qs
 
 import pymysql
@@ -17,6 +17,9 @@ SCOREBOARD_SPREADSHEET_ID = '1U9ESoCQAkihbgGNWkPrid5LhgJL04jXTf8zv93St8Wk'
 SCOREBOARD_RANGE_NAME = 'Sheet1!A1:C500'
 
 WEB_DIR = environ['HOME'] + '/public_html/'
+
+if 'sps' in listdir(WEB_DIR):
+    WEB_DIR = WEB_DIR + 'sps/'
 
 def get_url_id_param(url):
     params = parse_qs(urlparse(url).query)
